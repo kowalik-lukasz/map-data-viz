@@ -1,4 +1,5 @@
 import folium
+import branca.colormap as cm
 import os
 import pandas as pd
 import geopandas as gpd
@@ -7,13 +8,15 @@ import json
 import time
 from datetime import datetime
 from folium.plugins import TimeSliderChoropleth
+from branca.element import Template, MacroElement
+import map_legend_creator
 
 script_dir_path = os.path.dirname(os.path.realpath(__file__))
 
 ''' 
 Initialize the map
 '''
-map_GDP = folium.Map(location=[0, 0], zoom_start=4)
+map_GDP = folium.Map(location=[0, 0], zoom_start=4, max_bounds=True, min_zoom=3)
 
 '''
 Load and pre-process the geojson file
@@ -56,14 +59,21 @@ print(world_geojson)
 min_GDP_val, max_GDP_val = df_GDP[df_GDP.columns[4:]].min().min(), df_GDP[df_GDP.columns[4:]].max().max()
 print(min_GDP_val, max_GDP_val)
 
+# Create a color list
+
+color_list = [
+        '#808080','#A50026','#D73027','#F46D43','#FDAE61','#FEE08B','#FFFFBF','#D9EF8B','#A6D96A','#66BD63','#1A9850','#006837'
+    ]
+
 # Create a list of evenly spaced numbers over a min-max interval
-bins = np.linspace(min_GDP_val, max_GDP_val, 12)
+bins = np.geomspace(min_GDP_val, max_GDP_val, 12)
 
 # Replace NaNs (records with no data available) with '-1'
 df_GDP.fillna(-1, inplace=True)
 
 # Add NaN category to the bins
 bins = np.insert(bins, 0, -1.)
+bins = bins.tolist()
 print(bins)
 
 # Append 'color_[year]' columns to the GDP DataFrame
@@ -101,12 +111,32 @@ with open(os.path.join(script_dir_path, '..', 'data', 'data.json'), 'w') as outf
     json.dump(world_geojson.to_json(), outfile)
 
 '''
-Create a choropleth and add it to the map
+Create the map content and add it to the map object
 '''
+# Create the choropleth
 choropleth = TimeSliderChoropleth(
     world_geojson.set_index('country_id').to_json(),
     styledict=gdp_dict
 ).add_to(map_GDP)
+
+# Create the map legend
+legend_labels_dict = {}
+i = 0
+for color in color_list:
+    if i == 0:
+        legend_labels_dict[color_list[i]] = 'No data'
+    elif i == len(color_list) - 1:
+        legend_labels_dict[color_list[i]] = '> ' + str(round(bins[i], 2)) + '$'
+        break
+    else:         
+        legend_labels_dict[color] = str(round(bins[i], 2)) + '$' + ' - ' + str(round(bins[i+1], 2)) + '$'
+    i += 1
+
+print(legend_labels_dict)
+template = map_legend_creator.create_legend(caption='GDP per capita in USD', legend_labels=legend_labels_dict)
+macro = MacroElement()
+macro._template = Template(template)
+map_GDP.get_root().add_child(macro)
 
 '''
 Save completed map viz to an appropriate folder
