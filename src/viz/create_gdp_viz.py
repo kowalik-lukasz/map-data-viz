@@ -9,14 +9,10 @@ import time
 from datetime import datetime
 from folium.plugins import TimeSliderChoropleth
 from branca.element import Template, MacroElement
-import map_legend_creator
+import utils
 
 script_dir_path = os.path.dirname(os.path.realpath(__file__))
-
-''' 
-Initialize the map
-'''
-map_GDP = folium.Map(location=[0, 0], zoom_start=4, max_bounds=True, min_zoom=3)
+pd.set_option('display.max_rows', None)
 
 '''
 Load and pre-process the geojson file
@@ -30,8 +26,6 @@ country_list = world_geojson['ISO_A3'].tolist()
 '''
 Load and pre-process the GDP data
 '''
-pd.set_option('display.max_rows', None)
-
 # Load the GDP data
 df_GDP_path = os.path.normpath(os.path.join(script_dir_path, '..', 'data', 'GDP_per_capita_world_data.csv'))
 df_GDP = pd.read_csv(df_GDP_path, index_col='Country Code', skiprows=4)
@@ -65,7 +59,7 @@ color_list = [
         '#808080','#A50026','#D73027','#F46D43','#FDAE61','#FEE08B','#FFFFBF','#D9EF8B','#A6D96A','#66BD63','#1A9850','#006837'
     ]
 
-# Create a list of evenly spaced numbers over a min-max interval
+# Create a list of geometrically spaced numbers over a min-max interval
 bins = np.geomspace(min_GDP_val, max_GDP_val, 12)
 
 # Replace NaNs (records with no data available) with '-1'
@@ -109,6 +103,11 @@ with open(os.path.join(script_dir_path, '..', 'data', 'styledict.json'), 'w') as
     
 with open(os.path.join(script_dir_path, '..', 'data', 'data.json'), 'w') as outfile:
     json.dump(world_geojson.to_json(), outfile)
+    
+''' 
+Initialize the map
+'''
+map_GDP = folium.Map(location=[0, 0], zoom_start=4, max_bounds=True, min_zoom=3)    
 
 '''
 Create the map content and add it to the map object
@@ -133,7 +132,7 @@ for color in color_list:
     i += 1
 
 print(legend_labels_dict)
-template = map_legend_creator.create_legend(caption='GDP per capita in USD', legend_labels=legend_labels_dict)
+template = utils.create_legend(caption='GDP per capita in USD', legend_labels=legend_labels_dict)
 macro = MacroElement()
 macro._template = Template(template)
 map_GDP.get_root().add_child(macro)
