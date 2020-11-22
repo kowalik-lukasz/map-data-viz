@@ -2,4 +2,3 @@ src/viz/__pycache__
 src/viz/data_checks_script.py
 src/viz/maps/*
 !src/viz/maps/.gitkeep
-src/data/Accidents0515.csv
