@@ -81,9 +81,12 @@ def create_covid_viz():
     # df_covid_path = os.path.join(data_dir_path, 'covid_' + newest_dataset)
     df_covid = pd.read_csv(newest_dataset)
     print(df_covid.head())
+    print(df_covid['Last_Update'][0])
+    timestamp = df_covid['Last_Update'][0]
     
     # Replace some country names
     df_covid.replace(to_replace={'Country_Region' : 'US'}, value='United States of America', inplace=True)
+    df_covid.replace(to_replace={'Country_Region' : 'Bahamas'}, value='The Bahamas', inplace=True)
     df_covid.replace(to_replace={'Country_Region' : 'Congo (Brazzaville)'}, value='Republic of Congo', inplace=True)
     df_covid.replace(to_replace={'Country_Region' : 'Congo (Kinshasa)'}, value='Democratic Republic of the Congo', inplace=True)
     df_covid.replace(to_replace={'Country_Region' : 'Taiwan*'}, value='Taiwan', inplace=True)
@@ -116,17 +119,42 @@ def create_covid_viz():
     # Replace NaNs in the DataFrame with '-1'
     df_covid_joined.fillna(-1, inplace=True)
     
+    # Add the data columns to geo json for future popup displaying
+    world_geojson = world_geojson.assign(Confirmed=df_covid_joined['Confirmed'],
+                                         Deaths=df_covid_joined['Deaths'],
+                                         Active=df_covid_joined['Active'],
+                                         Incident_Rate=df_covid_joined['Incident_Rate'],
+                                         Case_Fatality_Ratio=df_covid_joined['Case_Fatality_Ratio'])
+    print(world_geojson)
+    
+    # Set the correct index columns
+    df_covid_joined.set_index('Country_Region', inplace=True)
+    
     # Create a lists of evenly spaced attribute values over computed min-max intervals and assign corresponding colors to the DataFrame
     colormap_dict = {}
+    bins = []
     for name in column_names:
-        bins = np.linspace(start=min_dict[name], stop=max_dict[name], num=9)
-        bins = np.insert(bins, 0, -1.)
-        bins = bins.tolist()
-        colormap_dict[name] = cm.StepColormap(colors=color_dict[name], index=bins, vmin=min_dict[name], vmax=max_dict[name])
+        # Work-around for geometric space not accepting zeros in the sequence
+        tmp_min = min_dict[name]
+        if min_dict[name] < 1:
+            min_dict[name] = 1
+        
+        inner_bins = np.geomspace(start=min_dict[name], stop=max_dict[name], num=10)
+        min_dict[name] = tmp_min
+        inner_bins = np.delete(inner_bins, 0)
+        inner_bins = np.insert(inner_bins, 0, min_dict[name])
+        inner_bins = np.insert(inner_bins, 0, -1.)
+        inner_bins = inner_bins.tolist()
+        
+        # Round the inner_bins values before appending to the bins list
+        if name in ['Confirmed', 'Deaths', 'Active']:
+            inner_bins = [int(round(bin, 0)) for bin in inner_bins]
+        else:
+            inner_bins = [round(bin, 2) for bin in inner_bins]
+        
+        bins.append(inner_bins)
+        colormap_dict[name] = cm.StepColormap(colors=color_dict[name], index=inner_bins, vmin=min_dict[name], vmax=max_dict[name])
         df_covid_joined[name+'_color'] = df_covid_joined[name].map(lambda x: colormap_dict[name].rgb_hex_str(x))
-    
-    df_covid_joined.set_index('Country_Region', inplace=True)
-    print(df_covid_joined)
     
     ''' 
     Initialize the map
@@ -139,38 +167,23 @@ def create_covid_viz():
     '''
     Create the content of the map
     '''
-    # choropleths_dict = {}
-    # for category in column_names:
-    #     choropleths_dict[category] = folium.GeoJson(data=world_geojson,
-    #                                                 name=category + ' Cases',
-    #                                                 style_function=lambda x: {
-    #                                                    'fillColor': df_covid_joined[category + '_color'][x['properties']['Country_Region']],
-    #                                                     'fillOpacity': 0.7,
-    #                                                     'color': 'black',
-    #                                                     'weight': 1
-    #                                                     }
-    #                                                 ).add_to(map_covid)
-    #     colormap_dict[category].add_to(map_covid)
-    #     utils.BindColormap(choropleths_dict[category], colormap_dict[category]).add_to(map_covid)
+    # Create FeatureGroups to group the data
+    feature_groups = []
+    for category, _ in color_dict.items():
+        group = folium.FeatureGroup(category, overlay=False)
+        feature_groups.append(group)
     
     # Create the choropleths
     choropleth_confirmed = folium.GeoJson(data=world_geojson,
+                                          zoom_on_click=False,
                                           name='Confirmed Cases',
                                           style_function=lambda x: {
                                               'fillColor': df_covid_joined['Confirmed_color'][x['properties']['Country_Region']],
                                               'fillOpacity': 0.7,
                                               'color': 'black',
-                                              'weight': 1
-                                          }).add_to(map_covid)
-    
-    choropleth_active = folium.GeoJson(data=world_geojson,
-                                       name='Active Cases',
-                                       style_function=lambda x: {
-                                           'fillColor': df_covid_joined['Active_color'][x['properties']['Country_Region']],
-                                           'fillOpacity': 0.7,
-                                           'color': 'black',
-                                           'weight': 1
-                                        }).add_to(map_covid)
+                                              'weight': 0.5
+                                          }).add_to(feature_groups[0])
+    popup_confirmed = folium.GeoJsonPopup(fields=['Country_Region', 'Confirmed'], labels=False).add_to(choropleth_confirmed)
     
     choropleth_deaths = folium.GeoJson(data=world_geojson,
                                        name='Deaths',
@@ -179,7 +192,18 @@ def create_covid_viz():
                                            'fillOpacity': 0.7,
                                            'color': 'black',
                                            'weight': 1
-                                        }).add_to(map_covid)
+                                        }).add_to(feature_groups[1])
+    popup_deaths = folium.GeoJsonPopup(fields=['Country_Region', 'Deaths'], labels=False).add_to(choropleth_deaths)
+    
+    choropleth_active = folium.GeoJson(data=world_geojson,
+                                       name='Active Cases',
+                                       style_function=lambda x: {
+                                           'fillColor': df_covid_joined['Active_color'][x['properties']['Country_Region']],
+                                           'fillOpacity': 0.7,
+                                           'color': 'black',
+                                           'weight': 1
+                                        }).add_to(feature_groups[2])
+    popup_active = folium.GeoJsonPopup(fields=['Country_Region', 'Active'], labels=False).add_to(choropleth_active)
     
     choropleth_incident_rate = folium.GeoJson(data=world_geojson,
                                               name='Incident Rate',
@@ -188,7 +212,9 @@ def create_covid_viz():
                                                   'fillOpacity': 0.7,
                                                   'color': 'black',
                                                   'weight': 1
-                                                  }).add_to(map_covid)
+                                                  }).add_to(feature_groups[3])
+    popup_incident_rate = folium.GeoJsonPopup(fields=['Country_Region', 'Incident_Rate'], labels=False).add_to(choropleth_incident_rate)
+    
     
     choropleth_case_fatality_ratio = folium.GeoJson(data=world_geojson,
                                                      name='Case Fatality Ratio',
@@ -197,20 +223,59 @@ def create_covid_viz():
                                                          'fillOpacity': 0.7,
                                                          'color': 'black',
                                                          'weight': 1
-                                                         }).add_to(map_covid)
+                                                         }).add_to(feature_groups[4])
+    popup_case_fatality_ratio = folium.GeoJsonPopup(fields=['Country_Region', 'Case_Fatality_Ratio'], labels=False).add_to(choropleth_case_fatality_ratio)
+    
+    # Create the map legends templates
+    legend_str_dict = {}
+    for i, (k, v) in enumerate(color_dict.items()):
+        legend_labels_dict = {}
+        j = 0
+        for color in v:
+            if j == 0:
+                legend_labels_dict[color] = 'No data'
+            elif j == len(v) - 1:
+                legend_labels_dict[color] = '> ' + str(bins[i][j])
+                break
+            else:
+                legend_labels_dict[color] = str(bins[i][j]) + ' - ' + str(bins[i][j+1])
+            j += 1
+        legend_str_dict[k] = legend_labels_dict
+    
+    print(legend_str_dict)    
+    template = utils.create_legend(caption='COVID-19 status as of: ' +str(timestamp), legend_labels=legend_str_dict)
+    macro = MacroElement()
+    macro._template = Template(template)
+    map_covid.get_root().add_child(macro)
+    # Create the macros for map legends    
+    # legends_arr = []
+    # for legend in legends_str_arr:   
+    #     macro = MacroElement()
+    #     macro._name = 'Temp'
+    #     macro._template = Template(legend)
+    #     legends_arr.append(macro)
+        # map_covid.get_root().add_child(macro)
+    
+        
+    # for i, legend in enumerate(legends_arr, start=0):
+    #     legend.add_to(feature_groups[i])
+    
+    for feature_group in feature_groups:
+        feature_group.add_to(map_covid)
+
     # Add the colormaps to the map object
-    for category in column_names:
-        colormap_dict[category].add_to(map_covid)
+    # for category in column_names:
+    #     colormap_dict[category].add_to(map_covid)
         
     # Bind choropleths with corresponding colormaps    
-    utils.BindColormap(choropleth_confirmed, colormap_dict['Confirmed']).add_to(map_covid)
-    utils.BindColormap(choropleth_active, colormap_dict['Active']).add_to(map_covid)
-    utils.BindColormap(choropleth_deaths, colormap_dict['Deaths']).add_to(map_covid)
-    utils.BindColormap(choropleth_incident_rate, colormap_dict['Incident_Rate']).add_to(map_covid)
-    utils.BindColormap(choropleth_case_fatality_ratio, colormap_dict['Case_Fatality_Ratio']).add_to(map_covid)
+    # utils.BindColormap(choropleth_confirmed, legends_arr[0]).add_to(map_covid)
+    # utils.BindColormap(choropleth_active, legends_arr[1]).add_to(map_covid)
+    # utils.BindColormap(choropleth_deaths, legends_arr[2]).add_to(map_covid)
+    # utils.BindColormap(choropleth_incident_rate, legends_arr[3]).add_to(map_covid)
+    # utils.BindColormap(choropleth_case_fatality_ratio, legends_arr[4]).add_to(map_covid)
     
     # Activate Layer Control
-    folium.LayerControl(collapsed=False).add_to(map_covid)
+    folium.LayerControl(collapsed=True).add_to(map_covid)
     
     '''
     Save completed map viz to an appropriate folder
