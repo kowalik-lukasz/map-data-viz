@@ -1,5 +1,8 @@
 src/viz/__pycache__
-src/viz/data_checks_script.py
-src/viz/maps/*
+src/webapp/__pycache__
+src/viz/config.py
+src/webapp/templates/COVID-19_viz.html
+src/webapp/templates/GDP_viz.html
+src/webapp/templates/SF_crime_viz.html
+src/webapp/templates/UK_accidents_viz.html
 src/data/Accidents0515.csv
-!src/viz/maps/.gitkeep
