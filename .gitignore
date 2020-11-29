@@ -5,4 +5,3 @@ src/webapp/templates/COVID-19_viz.html
 src/webapp/templates/GDP_viz.html
 src/webapp/templates/SF_crime_viz.html
 src/webapp/templates/UK_accidents_viz.html
-src/data/Accidents0515.csv

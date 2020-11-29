@@ -24,6 +24,8 @@ def create_uk_accidents_viz():
     # Drop the rows in which there's no lat lon data
     df_accidents = df_accidents[df_accidents['Latitude'].notna()]
 
+    df_accidents.to_csv(df_accidents_path)
+    
     # Leave only the 2015 accidents
     df_accidents = df_accidents[df_accidents['Date'].dt.year == 2015]
 
@@ -77,3 +79,6 @@ def create_uk_accidents_viz():
     '''
     map_accidents.save(os.path.join(script_dir_path, '..', 'webapp', 'templates', 'UK_accidents_viz.html'))
     print('Successfully created the UK accidents viz!')
+
+if __name__ == '__main__':
+    create_uk_accidents_viz()
