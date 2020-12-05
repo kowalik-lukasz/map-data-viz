@@ -22,7 +22,7 @@ def download_file(download_url='', location='', filename=''):
         raise Exception(e)
     
 def create_legend(caption=None, legend_labels=None) -> str:
-    file = open(os.path.join(script_dir_path, '..', 'data', 'legend_template.txt'), 'r')
+    file = open(os.path.join(script_dir_path, 'legend_template.txt'), 'r')
     lines = file.readlines()
     file.close()
     
