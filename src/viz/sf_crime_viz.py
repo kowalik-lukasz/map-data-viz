@@ -86,7 +86,8 @@ def create_sf_crime_viz():
     for _ in range(len(locations_list)):
         icon_list.append(folium.Icon(icon='exclamation', prefix='fa', color='orange'))
 
-    marker_cluster = MarkerCluster(locations=locations_list, popups=popups_list, icons=icon_list).add_to(map_crime)
+    marker_cluster = MarkerCluster(locations=locations_list, popups=popups_list, icons=icon_list)
+    marker_cluster.add_to(map_crime)
     
     # Create map legend
     current_timestamp = datetime.now() - timedelta(days=1)

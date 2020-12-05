@@ -101,7 +101,8 @@ def create_gdp_viz():
     choropleth = TimeSliderChoropleth(
         world_geojson.set_index('country_id').to_json(),
         styledict=gdp_dict
-    ).add_to(map_GDP)
+    )
+    choropleth.add_to(map_GDP)
 
     # Create the map legend
     legend_labels_dict = {}

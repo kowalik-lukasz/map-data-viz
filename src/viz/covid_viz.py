@@ -179,7 +179,8 @@ def create_covid_viz():
                                               'color': 'black',
                                               'weight': 0.5
                                           }).add_to(feature_groups[0])
-    popup_confirmed = folium.GeoJsonPopup(fields=['Country_Region', 'Confirmed'], labels=False).add_to(choropleth_confirmed)
+    popup_confirmed = folium.GeoJsonPopup(fields=['Country_Region', 'Confirmed'], labels=False)
+    popup_confirmed.add_to(choropleth_confirmed)
     
     choropleth_deaths = folium.GeoJson(data=world_geojson,
                                        name='Deaths',
@@ -189,7 +190,8 @@ def create_covid_viz():
                                            'color': 'black',
                                            'weight': 1
                                         }).add_to(feature_groups[1])
-    popup_deaths = folium.GeoJsonPopup(fields=['Country_Region', 'Deaths'], labels=False).add_to(choropleth_deaths)
+    popup_deaths = folium.GeoJsonPopup(fields=['Country_Region', 'Deaths'], labels=False)
+    popup_deaths.add_to(choropleth_deaths)
     
     choropleth_active = folium.GeoJson(data=world_geojson,
                                        name='Active Cases',
@@ -199,7 +201,8 @@ def create_covid_viz():
                                            'color': 'black',
                                            'weight': 1
                                         }).add_to(feature_groups[2])
-    popup_active = folium.GeoJsonPopup(fields=['Country_Region', 'Active'], labels=False).add_to(choropleth_active)
+    popup_active = folium.GeoJsonPopup(fields=['Country_Region', 'Active'], labels=False)
+    popup_active.add_to(choropleth_active)
     
     choropleth_incident_rate = folium.GeoJson(data=world_geojson,
                                               name='Incident Rate',
@@ -209,8 +212,8 @@ def create_covid_viz():
                                                   'color': 'black',
                                                   'weight': 1
                                                   }).add_to(feature_groups[3])
-    popup_incident_rate = folium.GeoJsonPopup(fields=['Country_Region', 'Incident_Rate'], labels=False).add_to(choropleth_incident_rate)
-    
+    popup_incident_rate = folium.GeoJsonPopup(fields=['Country_Region', 'Incident_Rate'], labels=False)
+    popup_incident_rate.add_to(choropleth_incident_rate)
     
     choropleth_case_fatality_ratio = folium.GeoJson(data=world_geojson,
                                                      name='Case Fatality Ratio',
@@ -220,7 +223,8 @@ def create_covid_viz():
                                                          'color': 'black',
                                                          'weight': 1
                                                          }).add_to(feature_groups[4])
-    popup_case_fatality_ratio = folium.GeoJsonPopup(fields=['Country_Region', 'Case_Fatality_Ratio'], labels=False).add_to(choropleth_case_fatality_ratio)
+    popup_case_fatality_ratio = folium.GeoJsonPopup(fields=['Country_Region', 'Case_Fatality_Ratio'], labels=False)
+    popup_case_fatality_ratio.add_to(choropleth_case_fatality_ratio)
     
     # Create the map legends templates
     legend_str_dict = {}
