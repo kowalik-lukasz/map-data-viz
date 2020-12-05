@@ -13,12 +13,12 @@ def create_uk_accidents_viz():
     Load and pre-process the UK accidents data
     '''
     # Load the accidents data
-    df_accidents_path = os.path.normpath(os.path.join(script_dir_path, '..', 'data', 'Accidents0515.csv'))
+    df_accidents_path = os.path.normpath(os.path.join(script_dir_path, '..', 'data', 'Accidents1115.csv'))
     fields = ['Accident_Index', 'Latitude', 'Longitude', 'Date', 'Accident_Severity']
     df_accidents = pd.read_csv(df_accidents_path, index_col='Accident_Index', usecols=fields)
 
     # Format and sort by date
-    df_accidents['Date'] = pd.to_datetime(df_accidents['Date'], format='%d/%m/%Y', errors='raise')
+    df_accidents['Date'] = pd.to_datetime(df_accidents['Date'], format='%Y-%m-%d', errors='raise')
     df_accidents.sort_values('Date', inplace=True)
 
     # Drop the rows in which there's no lat lon data
@@ -58,14 +58,15 @@ def create_uk_accidents_viz():
                             index=heatmap_time_dates, 
                             name='Traffic accidents in Great Britain (2015)', 
                             gradient={
-                                0.5: 'blue',
-                                0.8: 'lime',
-                                0.95: 'orange',
+                                .8: 'blue',
+                                .95: 'lime',
+                                .998: 'orange',
                                 1: 'red'
                             },
                             use_local_extrema=False,
-                            min_opacity=0.2,
-                            max_opacity=0.7)
+                            min_opacity=0,
+                            max_opacity=0.7,
+                            scale_radius=False)
     heatmap.add_to(map_accidents)
 
     # Create the legend
